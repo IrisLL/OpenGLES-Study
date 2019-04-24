@@ -6,6 +6,13 @@ import android.opengl.Matrix;
 import android.util.Log;
 import android.view.View;
 
+import com.example.openglstudy.Shape.Cone;
+import com.example.openglstudy.Shape.Cube;
+import com.example.openglstudy.Shape.IsoscelesTriangle;
+import com.example.openglstudy.Shape.Rectangle;
+import com.example.openglstudy.Shape.Round;
+import com.example.openglstudy.Shape.Triangel;
+
 import java.lang.reflect.Constructor;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -15,6 +22,9 @@ public class FGLRender implements GLSurfaceView.Renderer {
 
     private Triangel triangle;
     private IsoscelesTriangle isoscelesTriangle;
+    private Rectangle rectangle;
+    private Round round;
+    private Cube cube;
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
@@ -22,22 +32,35 @@ public class FGLRender implements GLSurfaceView.Renderer {
         GLES20.glClearColor(0.5f,0.5f,0.5f,1.0f);
         Log.i("iris","onSurfaceCreated");
       //  triangle=new Triangel();
-        isoscelesTriangle=new IsoscelesTriangle();
+       // isoscelesTriangle=new IsoscelesTriangle();
+       // rectangle=new Rectangle();
+       // round=new Round();
+      //  cube=new Cube();
+        //立方体需要开启深度测试
+        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+        
     }
 
     @Override
     public void onSurfaceChanged(GL10 gl10, int width, int height) {
 
         Log.i("iris","onSurfaceChanged");
+        /*
+        triangle
+         */
        // GLES20.glViewport(0,0,width,height);
+
+        /*
+        IsoscelesTriangle
+         */
         //计算宽高比
         float ratio=(float)width/height;
         //设置透视投影
-        Matrix.frustumM(IsoscelesTriangle.mProjectMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
+        Matrix.frustumM(Cube.mProjectMatrix, 0, -ratio, ratio, -1, 1, 3, 20);
         //设置相机位置
-        Matrix.setLookAtM(IsoscelesTriangle.mViewMatrix, 0, 0, 0, 7.0f, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
+        Matrix.setLookAtM(Cube.mViewMatrix,  0, 5.0f, 5.0f, 10.0f, 0f, 0f, 0f, 0f, 1.0f, 0.0f);
         //计算变换矩阵
-        Matrix.multiplyMM(IsoscelesTriangle.mMVPMatrix,0,IsoscelesTriangle.mProjectMatrix,0,IsoscelesTriangle.mViewMatrix,0);
+        Matrix.multiplyMM(Cube.mMVPMatrix,0,Cube.mProjectMatrix,0,Cube.mViewMatrix,0);
 
     }
 
@@ -47,7 +70,10 @@ public class FGLRender implements GLSurfaceView.Renderer {
         Log.e("iris","onDrawFrame");
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT|GLES20.GL_DEPTH_BUFFER_BIT);
        // triangle.Draw();
-        isoscelesTriangle.Draw();
+       // isoscelesTriangle.Draw();
+      //  rectangle.Draw();
+       // round.Draw();
+        cube.Draw();
     }
 
 

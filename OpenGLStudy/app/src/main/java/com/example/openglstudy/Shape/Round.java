@@ -1,84 +1,74 @@
-package com.example.openglstudy;
+package com.example.openglstudy.Shape;
 
 import android.opengl.GLES20;
-import android.opengl.Matrix;
+import android.util.Log;
+
+import com.example.openglstudy.FGLRender;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 
-public class IsoscelesTriangle {
+public class Round {
 
-    public static float[] mViewMatrix=new float[16];
-    public static float[] mProjectMatrix=new float[16];
-    public static float[] mMVPMatrix=new float[16];
-
-    private FloatBuffer vertexBuffer,colorBuffer;
+    private FloatBuffer vertexBuffer;
     private final String vertexShaderCode =
             "attribute vec4 vPosition;" +
                     "uniform mat4 vMatrix;"+
-                    "varying  vec4 vColor;"+
-                    "attribute vec4 aColor;"+
                     "void main() {" +
                     "  gl_Position = vMatrix*vPosition;" +
-                    "  vColor=aColor;"+
                     "}";
 
     private final String fragmentShaderCode =
             "precision mediump float;" +
-                    "varying vec4 vColor;" +
+                    "uniform vec4 vColor;" +
                     "void main() {" +
                     "  gl_FragColor = vColor;" +
                     "}";
 
     private int mProgram;
-
     static final int COORDS_PER_VERTEX = 3;
-    static float triangleCoords[] = {
-            0.5f,  0.5f, 0.0f, // top
-            -0.5f, -0.5f, 0.0f, // bottom left
-            0.5f, -0.5f, 0.0f  // bottom right
-    };
-
-   static private int mPositionHandle;
-    static private int mColorHandle;
-    static  private int mMatrixHandler;
 
 
+    private int mPositionHandle;
+    private int mColorHandle;
+    private int mMatrixHandler;
 
-    //顶点个数
-    private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
-    //顶点之间的偏移量
-    private final int vertexStride = COORDS_PER_VERTEX * 4; // 每个顶点四个字节
-
+    public static float[] mViewMatrix=new float[16];
+    public static float[] mProjectMatrix=new float[16];
+    public static float[] mMVPMatrix=new float[16];
 
     int vertexShader = FGLRender.loadShader(GLES20.GL_VERTEX_SHADER,
             vertexShaderCode);
     int fragmentShader = FGLRender.loadShader(GLES20.GL_FRAGMENT_SHADER,
             fragmentShaderCode);
 
+    //顶点之间的偏移量
+    private final int vertexStride = 0; // 每个顶点四个字节
 
-    float color[] = {
-            0.0f, 1.0f, 0.0f, 1.0f ,
-            1.0f, 0.0f, 0.0f, 1.0f,
-            0.0f, 0.0f, 1.0f, 1.0f
-    };
 
-    public  IsoscelesTriangle() {
+    private float radius=1.0f;
+    private int n=360;  //切割份数
 
+    private float[] shapePos;
+
+    private float height=0.0f;
+
+    //设置颜色，依次为红绿蓝和透明通道
+    float color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+
+    public Round() {
+
+        shapePos= createPositions();
         ByteBuffer bb = ByteBuffer.allocateDirect(
-                triangleCoords.length * 4);
+                shapePos.length * 4);
         bb.order(ByteOrder.nativeOrder());
 
         vertexBuffer = bb.asFloatBuffer();
-        vertexBuffer.put(triangleCoords);
+        vertexBuffer.put(shapePos);
         vertexBuffer.position(0);
-        ByteBuffer dd = ByteBuffer.allocateDirect(
-                color.length * 4);
-        dd.order(ByteOrder.nativeOrder());
-        colorBuffer = dd.asFloatBuffer();
-        colorBuffer.put(color);
-        colorBuffer.position(0);
 
 
         //创建一个空的OpenGLES程序
@@ -91,9 +81,29 @@ public class IsoscelesTriangle {
         GLES20.glLinkProgram(mProgram);
     }
 
-    public void Draw() {
+    public void setRadius(float radius){
+        this.radius=radius;
+    }
 
-        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT| GLES20.GL_DEPTH_BUFFER_BIT);
+    private float[]  createPositions(){
+        ArrayList<Float> data=new ArrayList<>();
+        data.add(0.0f);             //设置圆心坐标
+        data.add(0.0f);
+        data.add(height);
+        float angDegSpan=360f/n;
+        for(float i=0;i<360+angDegSpan;i+=angDegSpan){
+            data.add((float) (radius*Math.sin(i*Math.PI/180f)));
+            data.add((float)(radius*Math.cos(i*Math.PI/180f)));
+            data.add(height);
+        }
+        float[] f=new float[data.size()];
+        for (int i=0;i<f.length;i++){
+            f[i]=data.get(i);
+        }
+        return f;
+    }
+
+    public void Draw() {
         //将程序加入到OpenGLES2.0环境
         GLES20.glUseProgram(mProgram);
         //获取变换矩阵vMatrix成员句柄
@@ -109,18 +119,16 @@ public class IsoscelesTriangle {
                 GLES20.GL_FLOAT, false,
                 vertexStride, vertexBuffer);
         //获取片元着色器的vColor成员的句柄
-        mColorHandle = GLES20.glGetAttribLocation(mProgram, "aColor");
+        mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
         //设置绘制三角形的颜色
-        GLES20.glEnableVertexAttribArray(mColorHandle);
-        GLES20.glVertexAttribPointer(mColorHandle,4,
-                GLES20.GL_FLOAT,false,
-                0,colorBuffer);
+        GLES20.glUniform4fv(mColorHandle, 1, color, 0);
         //绘制三角形
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, shapePos.length/3);
         //禁止顶点数组的句柄
         GLES20.glDisableVertexAttribArray(mPositionHandle);
-
-
     }
 
+    public void setMatrix(float[] matrix){
+        this.mMVPMatrix=matrix;
+    }
 }

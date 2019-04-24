@@ -1,31 +1,25 @@
-package com.example.openglstudy;
-
+package com.example.openglstudy.Shape;
 
 import android.opengl.GLES20;
-import android.view.View;
 
-import com.example.openglstudy.Shape;
+import com.example.openglstudy.FGLRender;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
-import javax.microedition.khronos.egl.EGLConfig;
-import javax.microedition.khronos.opengles.GL10;
+public class Rectangle {
 
-import static com.example.openglstudy.FGLRender.loadShader;
-
-public class Triangel {
-
-    //顶点着色器  gj_position 为 shader 内置变量
     private FloatBuffer vertexBuffer;
+    private ShortBuffer indexBuffer;
     private final String vertexShaderCode =
             "attribute vec4 vPosition;" +
+                    "uniform mat4 vMatrix;"+
                     "void main() {" +
-                    "  gl_Position = vPosition;" +
+                    "  gl_Position = vMatrix*vPosition;" +
                     "}";
 
-    //片元着色器  gl_fragcolor 为 shader 内置变量
     private final String fragmentShaderCode =
             "precision mediump float;" +
                     "uniform vec4 vColor;" +
@@ -33,17 +27,38 @@ public class Triangel {
                     "  gl_FragColor = vColor;" +
                     "}";
 
-    //坐标数据设置  防止超出屏幕
-    static float triangleCoords[] = {
-            0.5f,  0.5f, 0.0f, // top
-            -0.5f, -0.5f, 0.0f, // bottom left
-            0.5f, -0.5f, 0.0f  // bottom right
-    };
-    //设置颜色，依次为红绿蓝和透明通道
-    float color[] = { 1.0f, 1.0f, 1.0f, 1.0f };  //白色
 
-    //设置每个顶点的坐标数
+    static float triangleCoords[] = {
+            -0.5f,  0.5f, 0.0f, // top left
+            -0.5f, -0.5f, 0.0f, // bottom left
+            0.5f, -0.5f, 0.0f, // bottom right
+            0.5f,  0.5f, 0.0f  // top right
+    };
+
+
+    static short index[]={
+            0,1,2,0,2,3
+    };
+
+    //设置颜色，依次为红绿蓝和透明通道
+    float color[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+    private int mPositionHandle;
+    private int mColorHandle;
+    private int mMatrixHandler;
+    private int mProgram;
+
     static final int COORDS_PER_VERTEX = 3;
+
+    public static float[] mViewMatrix=new float[16];
+    public static float[] mProjectMatrix=new float[16];
+    public static float[] mMVPMatrix=new float[16];
+
+    //顶点个数
+    private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
+    //顶点之间的偏移量
+    private final int vertexStride = COORDS_PER_VERTEX * 4; // 每个顶点四个字节
+
 
     int vertexShader = FGLRender.loadShader(GLES20.GL_VERTEX_SHADER,
             vertexShaderCode);
@@ -51,30 +66,21 @@ public class Triangel {
             fragmentShaderCode);
 
 
-    private int mProgram;
-    private int mPositionHandle;
-    private int mColorHandle;
+    public Rectangle() {
 
-
-    //顶点个数
-    private final int vertexCount = triangleCoords.length / COORDS_PER_VERTEX;
-    //顶点之间的偏移量
-    private final int vertexStride = COORDS_PER_VERTEX * 4; // 每个顶点四个字节
-
-    private int mMatrixHandler;
-
-
-
-    public Triangel() {
-        //申请底层空间
         ByteBuffer bb = ByteBuffer.allocateDirect(
                 triangleCoords.length * 4);
         bb.order(ByteOrder.nativeOrder());
-
-        //将坐标数据转换为 FloatBuffer,用以传入给OpenGL ES程序
         vertexBuffer = bb.asFloatBuffer();
         vertexBuffer.put(triangleCoords);
         vertexBuffer.position(0);
+
+        ByteBuffer cc= ByteBuffer.allocateDirect(index.length*2);
+        cc.order(ByteOrder.nativeOrder());
+        indexBuffer=cc.asShortBuffer();
+        indexBuffer.put(index);
+        indexBuffer.position(0);
+
 
         //创建一个空的OpenGLES程序
         mProgram = GLES20.glCreateProgram();
@@ -86,11 +92,13 @@ public class Triangel {
         GLES20.glLinkProgram(mProgram);
     }
 
-
     public void Draw() {
         //将程序加入到OpenGLES2.0环境
         GLES20.glUseProgram(mProgram);
-
+        //获取变换矩阵vMatrix成员句柄
+        mMatrixHandler= GLES20.glGetUniformLocation(mProgram,"vMatrix");
+        //指定vMatrix的值
+        GLES20.glUniformMatrix4fv(mMatrixHandler,1,false,mMVPMatrix,0);
         //获取顶点着色器的vPosition成员句柄
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "vPosition");
         //启用三角形顶点的句柄
@@ -104,9 +112,10 @@ public class Triangel {
         //设置绘制三角形的颜色
         GLES20.glUniform4fv(mColorHandle, 1, color, 0);
         //绘制三角形
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, vertexCount);
+//        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, vertexCount);
+        //索引法绘制正方形
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES,index.length, GLES20.GL_UNSIGNED_SHORT,indexBuffer);
         //禁止顶点数组的句柄
         GLES20.glDisableVertexAttribArray(mPositionHandle);
-
     }
 }
